@@ -106,6 +106,7 @@
       const isAdmin = currentUserRole === 'admin';
 
       levels.forEach(lvl => {
+        // Exibe o botão de showcase caso exista o link cadastrado
         const showcaseLink = lvl.showcase_url || lvl.video_url || null;
 
         container.innerHTML += `
@@ -167,10 +168,22 @@
 
     async function approveLevel(id) {
       const targetPos = parseInt(document.getElementById(`pos-${id}`).value, 10);
-      const { error } = await supabaseClient.from('levels').update({ meow_status: 'approved', position: targetPos }).eq('id', id);
+
+      if (isNaN(targetPos) || targetPos < 1) {
+        alert("Insira uma posição válida.");
+        return;
+      }
+
+      // Chama a RPC para aprovação segura sem loops
+      const { error } = await supabaseClient.rpc('approve_level_with_pos', {
+        p_level_id: id,
+        p_target_pos: targetPos
+      });
+
       if (error) {
         alert("Erro ao aprovar nível: " + error.message);
       } else {
+        alert("Nível aprovado com sucesso!");
         loadView('pending_levels');
       }
     }
@@ -180,6 +193,7 @@
         alert("Apenas ADMINS podem alterar a posição de níveis já aprovados.");
         return;
       }
+
       const newPos = parseInt(document.getElementById(`pos-${id}`).value, 10);
 
       if (isNaN(newPos) || newPos < 1) {
@@ -189,14 +203,16 @@
 
       if (newPos === currentPos) return;
 
-      const { error } = await supabaseClient
-        .from('levels')
-        .update({ position: newPos })
-        .eq('id', id);
-      
+      // Chama a RPC para alteração de posição sem loops
+      const { error } = await supabaseClient.rpc('update_level_position', {
+        p_level_id: id,
+        p_new_pos: newPos
+      });
+
       if (error) {
         alert("Erro ao atualizar posição: " + error.message);
       } else {
+        alert("Posição atualizada com sucesso!");
         loadView('approved_levels');
       }
     }
