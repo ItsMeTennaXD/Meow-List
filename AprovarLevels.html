@@ -106,7 +106,6 @@
       const isAdmin = currentUserRole === 'admin';
 
       levels.forEach(lvl => {
-        // Verifica se há URL de showcase ou vídeo cadastrado no nível
         const showcaseLink = lvl.showcase_url || lvl.video_url || null;
 
         container.innerHTML += `
@@ -168,8 +167,12 @@
 
     async function approveLevel(id) {
       const targetPos = parseInt(document.getElementById(`pos-${id}`).value, 10);
-      await supabaseClient.from('levels').update({ meow_status: 'approved', position: targetPos }).eq('id', id);
-      loadView('pending_levels');
+      const { error } = await supabaseClient.from('levels').update({ meow_status: 'approved', position: targetPos }).eq('id', id);
+      if (error) {
+        alert("Erro ao aprovar nível: " + error.message);
+      } else {
+        loadView('pending_levels');
+      }
     }
 
     async function updatePosition(id, currentPos) {
@@ -186,7 +189,6 @@
 
       if (newPos === currentPos) return;
 
-      // Altera diretamente a posição do nível selecionado
       const { error } = await supabaseClient
         .from('levels')
         .update({ position: newPos })
@@ -195,7 +197,6 @@
       if (error) {
         alert("Erro ao atualizar posição: " + error.message);
       } else {
-        alert("Posição atualizada com sucesso!");
         loadView('approved_levels');
       }
     }
