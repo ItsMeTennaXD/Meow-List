@@ -38,15 +38,6 @@
 
     <form id="levelForm" style="margin-top: 15px;">
       <div class="form-group">
-        <label>ID do Nível no Geometry Dash</label>
-        <div style="display: flex; gap: 8px;">
-          <input type="text" id="gdId" required placeholder="Ex: 12345678">
-          <button type="button" class="btn-verify" id="btnCheckGd">Validar ID</button>
-        </div>
-        <div id="gdStatus" class="api-status"></div>
-      </div>
-
-      <div class="form-group">
         <label>Nome do Nível</label>
         <input type="text" id="levelName" required placeholder="Ex: Bloodlust">
       </div>
@@ -54,6 +45,15 @@
       <div class="form-group">
         <label>Criador(es)</label>
         <input type="text" id="levelCreator" required placeholder="Ex: Manix645 & more">
+      </div>
+
+      <div class="form-group">
+        <label>ID do Nível no Geometry Dash</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="gdId" required placeholder="Ex: 12345678">
+          <button type="button" class="btn-verify" id="btnCheckGd">Validar ID</button>
+        </div>
+        <div id="gdStatus" class="api-status"></div>
       </div>
 
       <div class="form-group">
@@ -99,6 +99,8 @@
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzcHN5emRvaGhwcnhvcmF1ZGFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MjQ3NjEsImV4cCI6MjEwMzAwMDc2MX0.1uQOWMpovDiDFUIYbJ-1bovwc7OjGd4PauCm5U34dlE";
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    let isVerified = false;
+
     async function checkAuthStatus() {
       const { data: { session } } = await supabaseClient.auth.getSession();
       const banner = document.getElementById('userStatusBanner');
@@ -106,7 +108,6 @@
       banner.style.display = 'flex';
       
       if (session) {
-        // Busca o username nos metadados ou na tabela profiles
         let username = session.user.user_metadata.username;
 
         if (!username) {
@@ -135,27 +136,73 @@
       else { nongInput.removeAttribute('required'); nongInput.value = ''; }
     }
 
+    // Função para resetar validação se alterar os campos
+    ['gdId', 'levelName', 'levelCreator'].forEach(id => {
+      document.getElementById(id).addEventListener('input', () => {
+        isVerified = false;
+        const statusDiv = document.getElementById('gdStatus');
+        statusDiv.className = "api-status";
+        statusDiv.textContent = "";
+      });
+    });
+
     document.getElementById('btnCheckGd').addEventListener('click', async () => {
       const gdId = document.getElementById('gdId').value.trim();
+      const inputName = document.getElementById('levelName').value.trim();
+      const inputCreator = document.getElementById('levelCreator').value.trim();
       const statusDiv = document.getElementById('gdStatus');
-      if (!gdId) { statusDiv.className = "api-status api-error"; statusDiv.textContent = "Digite um ID válido."; return; }
-      statusDiv.className = "api-status"; statusDiv.textContent = "Buscando dados no Geometry Dash...";
+
+      if (!gdId || !inputName || !inputCreator) {
+        statusDiv.className = "api-status api-error";
+        statusDiv.textContent = "Preencha o Nome, Criador e o ID antes de verificar.";
+        isVerified = false;
+        return;
+      }
+
+      // Extrai apenas o primeiro criador (antes de &, e, and, ,, etc.)
+      const firstCreator = inputCreator.split(/&|e|and|,|\+/i)[0].trim().toLowerCase();
+
+      statusDiv.className = "api-status";
+      statusDiv.textContent = "Conectando ao GDbrowser para verificar...";
+
       try {
         const response = await fetch(`https://gdbrowser.com/api/level/${gdId}`);
-        if (!response.ok) throw new Error("Nível não encontrado!");
+        if (!response.ok) throw new Error("ID não existe no Geometry Dash.");
+        
         const data = await response.json();
-        document.getElementById('levelName').value = data.name;
-        document.getElementById('levelCreator').value = data.author;
-        statusDiv.className = "api-success api-status";
-        statusDiv.textContent = `✓ Nível encontrado: "${data.name}" por ${data.author}`;
+        const apiName = data.name.trim().toLowerCase();
+        const apiAuthor = data.author.trim().toLowerCase();
+
+        const nameMatch = apiName === inputName.toLowerCase();
+        const creatorMatch = apiAuthor === firstCreator;
+
+        if (nameMatch && creatorMatch) {
+          statusDiv.className = "api-status api-success";
+          statusDiv.textContent = `✓ Validação concluída: "${data.name}" por ${data.author}`;
+          isVerified = true;
+        } else {
+          statusDiv.className = "api-status api-error";
+          let errorMsg = "✗ Os dados não batem!";
+          if (!nameMatch) errorMsg += ` Nome no GD: "${data.name}".`;
+          if (!creatorMatch) errorMsg += ` Criador no GD: "${data.author}".`;
+          statusDiv.textContent = errorMsg;
+          isVerified = false;
+        }
       } catch (err) {
         statusDiv.className = "api-status api-error";
-        statusDiv.textContent = "✗ ID não encontrado no Geometry Dash.";
+        statusDiv.textContent = "✗ ID do nível não encontrado no Geometry Dash.";
+        isVerified = false;
       }
     });
 
     document.getElementById('levelForm').addEventListener('submit', async function(e) {
       e.preventDefault();
+
+      if (!isVerified) {
+        alert("Por favor, clique em 'Validar ID' e confirme se o Nome, Criador e ID estão corretos antes de enviar!");
+        return;
+      }
+
       const { data: { session } } = await supabaseClient.auth.getSession();
       
       const gdId = document.getElementById('gdId').value.trim();
@@ -203,6 +250,7 @@
         alert("Nível enviado com sucesso! Aguarde a moderação.");
         this.reset();
         document.getElementById('gdStatus').textContent = "";
+        isVerified = false;
         toggleNongInput();
       } catch (err) {
         alert("Erro no envio: " + err.message);
