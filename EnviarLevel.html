@@ -136,7 +136,7 @@
       else { nongInput.removeAttribute('required'); nongInput.value = ''; }
     }
 
-    // Função para resetar validação se alterar os campos
+    // Reseta o estado de verificação caso alterem os campos principais
     ['gdId', 'levelName', 'levelCreator'].forEach(id => {
       document.getElementById(id).addEventListener('input', () => {
         isVerified = false;
@@ -154,21 +154,31 @@
 
       if (!gdId || !inputName || !inputCreator) {
         statusDiv.className = "api-status api-error";
+        statusDiv.style.color = "";
         statusDiv.textContent = "Preencha o Nome, Criador e o ID antes de verificar.";
         isVerified = false;
         return;
       }
 
-      // Extrai apenas o primeiro criador (antes de &, e, and, ,, etc.)
+      // Extrai apenas o primeiro criador (ex: de "Viprin & More" pega só "Viprin")
       const firstCreator = inputCreator.split(/&|e|and|,|\+/i)[0].trim().toLowerCase();
 
       statusDiv.className = "api-status";
+      statusDiv.style.color = "";
       statusDiv.textContent = "Conectando ao GDbrowser para verificar...";
 
       try {
         const response = await fetch(`https://gdbrowser.com/api/level/${gdId}`);
-        if (!response.ok) throw new Error("ID não existe no Geometry Dash.");
         
+        if (!response.ok) {
+          // Nível muito recente ou não indexado no GDBrowser
+          statusDiv.className = "api-status";
+          statusDiv.style.color = "#f59e0b"; // Amarelo
+          statusDiv.textContent = "⚠️ Nível recente não encontrado no GDBrowser. Validação liberada para checagem manual!";
+          isVerified = true;
+          return;
+        }
+
         const data = await response.json();
         const apiName = data.name.trim().toLowerCase();
         const apiAuthor = data.author.trim().toLowerCase();
@@ -178,10 +188,12 @@
 
         if (nameMatch && creatorMatch) {
           statusDiv.className = "api-status api-success";
+          statusDiv.style.color = "";
           statusDiv.textContent = `✓ Validação concluída: "${data.name}" por ${data.author}`;
           isVerified = true;
         } else {
           statusDiv.className = "api-status api-error";
+          statusDiv.style.color = "";
           let errorMsg = "✗ Os dados não batem!";
           if (!nameMatch) errorMsg += ` Nome no GD: "${data.name}".`;
           if (!creatorMatch) errorMsg += ` Criador no GD: "${data.author}".`;
@@ -189,9 +201,11 @@
           isVerified = false;
         }
       } catch (err) {
-        statusDiv.className = "api-status api-error";
-        statusDiv.textContent = "✗ ID do nível não encontrado no Geometry Dash.";
-        isVerified = false;
+        // Falha na requisição / Erro de conexão
+        statusDiv.className = "api-status";
+        statusDiv.style.color = "#f59e0b";
+        statusDiv.textContent = "⚠️ Não foi possível conectar ao GDBrowser. Validação liberada!";
+        isVerified = true;
       }
     });
 
@@ -199,7 +213,7 @@
       e.preventDefault();
 
       if (!isVerified) {
-        alert("Por favor, clique em 'Validar ID' e confirme se o Nome, Criador e ID estão corretos antes de enviar!");
+        alert("Por favor, clique em 'Validar ID' e confirme os dados antes de enviar!");
         return;
       }
 
