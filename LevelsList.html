@@ -28,15 +28,41 @@
     .tab-btn { flex: 1; padding: 12px; background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-muted); font-weight: bold; border-radius: 8px; cursor: pointer; text-align: center; }
     .tab-btn.active { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
 
-    .list-container { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 14px; }
-    .level-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 16px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-    .level-thumb { width: 100px; height: 60px; border-radius: 6px; object-fit: cover; border: 1px solid var(--card-border); background: #0b111e; }
-    .level-rank { font-size: 1.5rem; font-weight: bold; color: var(--accent-blue); min-width: 45px; text-align: center; }
-    .level-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-    .level-title { font-size: 1.2rem; font-weight: bold; }
-    .level-meta { font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 12px; flex-wrap: wrap; }
-    .badge-nong { background: #9333ea; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
-    .btn-video { background: #1e293b; color: var(--accent-blue); border: 1px solid var(--card-border); padding: 6px 10px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px; font-weight: bold; }
+    .list-container { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 10px; }
+    
+    /* Card apenas com o nome do level */
+    .level-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 16px; cursor: pointer; transition: background 0.2s; }
+    .level-card:hover { background: #182339; }
+    .level-card-header { display: flex; justify-content: space-between; align-items: center; }
+    .level-title { font-size: 1.15rem; font-weight: bold; }
+
+    /* Tabelinha interna expansível */
+    .level-details-table { margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--card-border); display: flex; flex-direction: column; gap: 12px; cursor: default; }
+    .meta-row { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+    .meta-col { display: flex; flex-direction: column; gap: 4px; }
+    .meta-label { font-size: 0.75rem; color: var(--text-muted); font-weight: bold; text-transform: uppercase; }
+    .meta-val { font-size: 0.95rem; font-weight: 600; }
+
+    .showcase-container { width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; overflow: hidden; border: 1px solid var(--card-border); display: flex; align-items: center; justify-content: center; margin-top: 5px; }
+    .showcase-container iframe { width: 100%; height: 100%; border: none; }
+    .showcase-fallback { color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 20px; }
+
+    .desc-box { background: #0b111e; border: 1px solid var(--card-border); padding: 10px 12px; border-radius: 6px; font-size: 0.9rem; color: #cbd5e1; white-space: pre-wrap; word-break: break-word; }
+    .id-footer { font-size: 0.8rem; color: var(--text-muted); text-align: right; }
+
+    /* Admin options */
+    .admin-actions { margin-top: 10px; display: flex; gap: 8px; justify-content: flex-end; }
+    .btn-admin { background: #1e293b; border: 1px solid var(--card-border); color: var(--accent-blue); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
+    .btn-admin:hover { background: var(--card-border); }
+
+    /* Modal de Edição para Admins */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
+    .modal-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; width: 100%; max-width: 500px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+    .modal-card input, .modal-card textarea, .modal-card select { background: #0b111e; border: 1px solid var(--card-border); padding: 10px; border-radius: 6px; color: #fff; width: 100%; font-size: 0.9rem; }
+    .modal-card textarea { resize: vertical; min-height: 80px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+    .btn-save { background: var(--accent-green); color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .btn-cancel { background: #334155; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -61,22 +87,95 @@
     <p style="text-align: center; color: var(--text-muted);">Carregando níveis...</p>
   </main>
 
+  <!-- MODAL DE EDIÇÃO ADMIN -->
+  <div class="modal-overlay" id="editModal" style="display: none;">
+    <div class="modal-card">
+      <h3 style="color:#fff;"><i class="fa-solid fa-pen-to-square"></i> Editar Nível (Admin)</h3>
+      <input type="hidden" id="editLevelId">
+      
+      <div>
+        <label style="font-size: 0.8rem; color: var(--text-muted);">Nome do Nível</label>
+        <input type="text" id="editName">
+      </div>
+
+      <div>
+        <label style="font-size: 0.8rem; color: var(--text-muted);">Criador(es)</label>
+        <input type="text" id="editCreator">
+      </div>
+
+      <div>
+        <label style="font-size: 0.8rem; color: var(--text-muted);">Verificador</label>
+        <input type="text" id="editVerifier">
+      </div>
+
+      <div>
+        <label style="font-size: 0.8rem; color: var(--text-muted);">Link da Showcase (YouTube)</label>
+        <input type="text" id="editShowcase">
+      </div>
+
+      <div>
+        <label style="font-size: 0.8rem; color: var(--text-muted);">Descrição</label>
+        <textarea id="editDescription"></textarea>
+      </div>
+
+      <div>
+        <label style="font-size: 0.8rem; color: var(--text-muted);">ID GD</label>
+        <input type="text" id="editGdId">
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeEditModal()">Cancelar</button>
+        <button class="btn-save" onclick="saveLevelEdit()">Salvar Alterações</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const SUPABASE_URL = "https://cspsyzdohhprxoraudap.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzcHN5emRvaGhwcnhvcmF1ZGFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MjQ3NjEsImV4cCI6MjEwMzAwMDc2MX0.1uQOWMpovDiDFUIYbJ-1bovwc7OjGd4PauCm5U34dlE";
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let currentCategory = 'LPDM';
+    let openLevelId = null;
+    let isAdmin = false;
+    let levelsDataCache = [];
 
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
+      await checkAdminRole();
       loadCategoryList(currentCategory);
     });
 
+    // Verifica se APENAS Admins têm acesso às funções de edição
+    async function checkAdminRole() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) { isAdmin = false; return; }
+
+      const { data: profile } = await supabaseClient
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profile && profile.role === 'admin') {
+        isAdmin = true;
+      } else {
+        isAdmin = false;
+      }
+    }
+
     function switchTab(cat) {
       currentCategory = cat;
+      openLevelId = null;
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       event.target.classList.add('active');
       loadCategoryList(cat);
+    }
+
+    function extractYouTubeEmbedUrl(url) {
+      if (!url) return null;
+      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+      const match = url.match(regExp);
+      return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}` : null;
     }
 
     async function loadCategoryList(cat) {
@@ -93,26 +192,148 @@
         return;
       }
 
+      levelsDataCache = levels;
+      renderList();
+    }
+
+    function toggleLevelDetails(id) {
+      if (openLevelId === id) {
+        openLevelId = null;
+      } else {
+        openLevelId = id;
+      }
+      renderList();
+    }
+
+    function renderList() {
+      const container = document.getElementById('listContainer');
       container.innerHTML = '';
-      levels.forEach(lvl => {
-        container.innerHTML += `
-          <div class="level-card">
-            <span class="level-rank">#${lvl.position}</span>
-            <img src="${lvl.thumbnail_url || 'https://via.placeholder.com/100x60'}" class="level-thumb" alt="Thumbnail">
-            
-            <div class="level-info">
-              <span class="level-title">${lvl.name} <small style="font-weight:normal; font-size:0.85rem; color:var(--text-muted)">(ID: ${lvl.gd_id})</small></span>
-              <div class="level-meta">
-                <span><i class="fa-solid fa-pen-nib"></i> Criador: <b>${lvl.creator}</b></span>
-                <span><i class="fa-solid fa-check-double"></i> Verificador: <b>${lvl.verifier}</b></span>
-                ${lvl.has_nong ? `<span class="badge-nong"><i class="fa-solid fa-music"></i> NONG: ${lvl.nong_name || 'Sim'}</span>` : ''}
+
+      levelsDataCache.forEach(lvl => {
+        const isOpen = (openLevelId === lvl.id);
+
+        let showcaseHtml = '';
+        const rawShowcase = lvl.showcase_url || lvl.video_url;
+        const embedUrl = extractYouTubeEmbedUrl(rawShowcase);
+
+        if (embedUrl) {
+          showcaseHtml = `
+            <div class="showcase-container">
+              <iframe src="${embedUrl}" allowfullscreen></iframe>
+            </div>
+          `;
+        } else {
+          showcaseHtml = `
+            <div class="showcase-container">
+              <div class="showcase-fallback">
+                <i class="fa-solid fa-triangle-exclamation"></i> showcase não encontrada/não e do YouTube
               </div>
             </div>
+          `;
+        }
 
-            ${lvl.video_url ? `<a href="${lvl.video_url}" target="_blank" class="btn-video"><i class="fa-solid fa-play"></i> Vídeo</a>` : ''}
+        const descriptionText = lvl.description ? lvl.description : "Sem descrição";
+
+        let detailsHtml = '';
+        if (isOpen) {
+          detailsHtml = `
+            <div class="level-details-table" onclick="event.stopPropagation()">
+              <div class="meta-row">
+                <div class="meta-col">
+                  <span class="meta-label">Criador(es)</span>
+                  <span class="meta-val">${lvl.creator}</span>
+                </div>
+                <div class="meta-col" style="text-align: right;">
+                  <span class="meta-label">Verificador</span>
+                  <span class="meta-val">${lvl.verifier}</span>
+                </div>
+              </div>
+
+              ${showcaseHtml}
+
+              <div style="display:flex; flex-direction:column; gap:4px;">
+                <span class="meta-label">Descrição</span>
+                <div class="desc-box">${descriptionText}</div>
+              </div>
+
+              <div class="id-footer">
+                ID GD: <strong>${lvl.gd_id}</strong>
+              </div>
+
+              ${isAdmin ? `
+                <div class="admin-actions">
+                  <button class="btn-admin" onclick="openEditModal('${lvl.id}')"><i class="fa-solid fa-pen"></i> Editar Level (Admin)</button>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }
+
+        container.innerHTML += `
+          <div class="level-card" onclick="toggleLevelDetails('${lvl.id}')">
+            <div class="level-card-header">
+              <span class="level-title">#${lvl.position} - ${lvl.name}</span>
+              <i class="fa-solid ${isOpen ? 'fa-chevron-up' : 'fa-chevron-down'}" style="color: var(--text-muted);"></i>
+            </div>
+            ${detailsHtml}
           </div>
         `;
       });
+    }
+
+    function openEditModal(levelId) {
+      const lvl = levelsDataCache.find(l => l.id === levelId);
+      if (!lvl) return;
+
+      document.getElementById('editLevelId').value = lvl.id;
+      document.getElementById('editName').value = lvl.name || '';
+      document.getElementById('editCreator').value = lvl.creator || '';
+      document.getElementById('editVerifier').value = lvl.verifier || '';
+      document.getElementById('editShowcase').value = lvl.showcase_url || lvl.video_url || '';
+      document.getElementById('editDescription').value = lvl.description || '';
+      document.getElementById('editGdId').value = lvl.gd_id || '';
+
+      document.getElementById('editModal').style.display = 'flex';
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').style.display = 'none';
+    }
+
+    async function saveLevelEdit() {
+      if (!isAdmin) {
+        alert("Apenas administradores podem realizar edições!");
+        return;
+      }
+
+      const id = document.getElementById('editLevelId').value;
+      const name = document.getElementById('editName').value.trim();
+      const creator = document.getElementById('editCreator').value.trim();
+      const verifier = document.getElementById('editVerifier').value.trim();
+      const showcase = document.getElementById('editShowcase').value.trim();
+      const description = document.getElementById('editDescription').value.trim() || null;
+      const gdId = document.getElementById('editGdId').value.trim();
+
+      const { error } = await supabaseClient
+        .from('levels')
+        .update({
+          name: name,
+          creator: creator,
+          verifier: verifier,
+          showcase_url: showcase,
+          video_url: showcase,
+          description: description,
+          gd_id: gdId
+        })
+        .eq('id', id);
+
+      if (error) {
+        alert("Erro ao atualizar o nível: " + error.message);
+      } else {
+        alert("Nível atualizado com sucesso!");
+        closeEditModal();
+        loadCategoryList(currentCategory);
+      }
     }
   </script>
 </body>
