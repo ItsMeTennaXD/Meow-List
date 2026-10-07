@@ -22,12 +22,15 @@
     h2 { margin-bottom: 8px; font-size: 1.4rem; color: #fff; text-align: center; }
     p.subtitle { color: var(--text-muted); font-size: 0.85rem; text-align: center; margin-bottom: 20px; }
     .form-group { margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px; }
+    .checkbox-group { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
     label { font-size: 0.85rem; color: var(--text-muted); font-weight: bold; }
     input, select { background: #0b111e; border: 1px solid var(--card-border); color: #fff; padding: 12px; border-radius: 8px; font-size: 0.95rem; outline: none; }
+    input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
     input:focus, select:focus { border-color: var(--accent-blue); }
     .btn-submit { background: var(--accent-green); color: #fff; font-weight: bold; border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 10px; font-size: 1rem; display: flex; justify-content: center; align-items: center; gap: 8px; }
     .btn-submit:hover { opacity: 0.9; }
     .back-link { display: block; text-align: center; margin-top: 15px; color: var(--text-muted); text-decoration: none; font-size: 0.85rem; }
+    .noclip-box { background: #0b111e; border: 1px dashed var(--card-border); padding: 14px; border-radius: 8px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; }
   </style>
 </head>
 <body>
@@ -57,7 +60,31 @@
         <input type="number" id="progress" min="1" max="100" placeholder="Ex: 100" required>
       </div>
 
-      <!-- 4. Vídeo de Prova (Aceita qualquer link/plataforma) -->
+      <!-- 4. Practice Mode -->
+      <div class="checkbox-group">
+        <input type="checkbox" id="isPractice">
+        <label for="isPractice" style="color: #fff; cursor: pointer;">Practice?</label>
+      </div>
+
+      <!-- 5. Noclip -->
+      <div class="checkbox-group">
+        <input type="checkbox" id="isNoclip" onchange="toggleNongFields()">
+        <label for="isNoclip" style="color: #fff; cursor: pointer;">Noclip?</label>
+      </div>
+
+      <!-- Campos condicionais para Noclip -->
+      <div class="noclip-box" id="noclipFields" style="display: none;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label for="noclipDeaths">Número de mortes?</label>
+          <input type="number" id="noclipDeaths" min="0" placeholder="Ex: 5">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label for="noclipAccuracy">Noclip accuracy?</label>
+          <input type="text" id="noclipAccuracy" placeholder="Ex: 98.75%">
+        </div>
+      </div>
+
+      <!-- 6. Vídeo de Prova -->
       <div class="form-group">
         <label for="videoUrl">Vídeo De Prova:</label>
         <input type="text" id="videoUrl" placeholder="Ex: https://youtu.be/... (YouTube, Medal, TikTok, IG, FB)" required>
@@ -78,7 +105,25 @@
       await loadApprovedLevels();
     });
 
-    // Carrega a lista de níveis aprovados da Meow List
+    function toggleNongFields() {
+      const isNoclip = document.getElementById('isNoclip').checked;
+      const noclipFields = document.getElementById('noclipFields');
+      const deathsInput = document.getElementById('noclipDeaths');
+      const accInput = document.getElementById('noclipAccuracy');
+
+      if (isNoclip) {
+        noclipFields.style.display = 'flex';
+        deathsInput.setAttribute('required', 'required');
+        accInput.setAttribute('required', 'required');
+      } else {
+        noclipFields.style.display = 'none';
+        deathsInput.removeAttribute('required');
+        accInput.removeAttribute('required');
+        deathsInput.value = '';
+        accInput.value = '';
+      }
+    }
+
     async function loadApprovedLevels() {
       const select = document.getElementById('levelSelect');
       const { data: levels, error } = await supabaseClient
@@ -98,7 +143,6 @@
       });
     }
 
-    // Validação simples de URL para aceitar qualquer plataforma
     function isValidUrl(string) {
       try {
         const url = new URL(string.startsWith('http') ? string : 'https://' + string);
@@ -108,13 +152,16 @@
       }
     }
 
-    // Processa o envio do formulário
     document.getElementById('recordForm').addEventListener('submit', async (e) => {
       e.preventDefault();
 
       const levelId = document.getElementById('levelSelect').value;
       const playerName = document.getElementById('playerName').value.trim();
       const progress = parseInt(document.getElementById('progress').value, 10);
+      const isPractice = document.getElementById('isPractice').checked;
+      const isNoclip = document.getElementById('isNoclip').checked;
+      const noclipDeaths = isNoclip ? parseInt(document.getElementById('noclipDeaths').value, 10) : null;
+      const noclipAccuracy = isNoclip ? document.getElementById('noclipAccuracy').value.trim() : null;
       let videoUrl = document.getElementById('videoUrl').value.trim();
 
       if (!levelId) {
@@ -127,7 +174,6 @@
         return;
       }
 
-      // Adiciona https:// se o usuário esqueceu de digitar
       if (!videoUrl.startsWith('http://') && !videoUrl.startsWith('https://')) {
         videoUrl = 'https://' + videoUrl;
       }
@@ -139,6 +185,10 @@
             level_id: levelId,
             player_name: playerName,
             progress: progress,
+            is_practice: isPractice,
+            is_noclip: isNoclip,
+            noclip_deaths: noclipDeaths,
+            noclip_accuracy: noclipAccuracy,
             video_url: videoUrl,
             status: 'pending'
           }
@@ -149,6 +199,7 @@
       } else {
         alert("Record enviado com sucesso! Aguarde a aprovação na moderação.");
         document.getElementById('recordForm').reset();
+        toggleNongFields();
       }
     });
   </script>

@@ -100,10 +100,35 @@
           const creator = r.levels ? r.levels.creator : 'Desconhecido';
           const gdId = r.levels ? r.levels.gd_id : '?';
 
+          // Montagem no formato exigido: [nome do level] • [porcentagem] • Mortes no noclip: [X] • Noclip accuracy: [Y] • "Practice mode"
+          let infoParts = [];
+          infoParts.push(`<strong>${lvlName}</strong>`);
+          
+          let pctText = `${r.progress}%`;
+          if (r.is_practice) {
+            pctText += ` Practice`;
+          }
+          infoParts.push(pctText);
+
+          if (r.is_noclip) {
+            if (r.noclip_deaths !== null && r.noclip_deaths !== undefined) {
+              infoParts.push(`Mortes no noclip: ${r.noclip_deaths}`);
+            }
+            if (r.noclip_accuracy) {
+              infoParts.push(`Noclip accuracy: ${r.noclip_accuracy}`);
+            }
+          }
+
+          if (r.is_practice) {
+            infoParts.push(`"Practice mode"`);
+          }
+
+          const recordLineText = infoParts.join(' • ');
+
           recordsHtml += `
             <li class="record-item">
               <div class="record-info">
-                <strong>${lvlName} ${r.progress}%</strong> 
+                ${recordLineText}
                 <span class="record-details">(Criador: ${creator} | ID:${gdId})</span>
               </div>
               <a href="${r.video_url}" target="_blank" class="record-link">
